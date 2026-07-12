@@ -7,9 +7,9 @@ export interface ReviewOptions {
 }
 
 /**
- * Render the end-of-game answer review: every graded question with the answer
- * the player gave and, when wrong, the correct one. Reuses the rules screen's
- * scrolling shell.
+ * Render the end-of-game answer review: every graded question always shows the
+ * answer the player gave, plus the correct one when they were wrong. Reuses the
+ * rules screen's scrolling shell.
  */
 export function renderReview(root: HTMLElement, opts: ReviewOptions): void {
   clear(root);
@@ -21,10 +21,9 @@ export function renderReview(root: HTMLElement, opts: ReviewOptions): void {
 
   const rows = opts.attempts.map((att, i) => {
     const verdict = att.correct
-      ? el('div', {
-          className: 'review-row__verdict review-row__verdict--good',
-          textContent: '✓ Bonne réponse',
-        })
+      ? el('div', { className: 'review-row__verdict review-row__verdict--good' }, [
+          el('span', { textContent: `✓ Ta réponse : ${att.given}` }),
+        ])
       : el('div', { className: 'review-row__verdict review-row__verdict--bad' }, [
           el('span', { textContent: `✗ Ta réponse : ${att.given}` }),
           el('span', {

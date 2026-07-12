@@ -26,9 +26,6 @@ function list(items: string[]): HTMLElement {
 /**
  * Render the rules page as a dedicated screen. The back button returns to the
  * screen the player came from (home or end) via `onBack`.
- *
- * PLACEHOLDER copy — describes the stand-in arithmetic game. Rewrite when the
- * real Mathle concept is defined.
  */
 export function renderRules(root: HTMLElement, opts: RulesOptions): void {
   clear(root);
@@ -40,28 +37,38 @@ export function renderRules(root: HTMLElement, opts: RulesOptions): void {
 
   const content = el('div', { className: 'rules-content' }, [
     section('Objectif', [
-      p('Marque un maximum de points en 60 secondes. (Concept provisoire : calcul mental.)'),
+      p('Marque un maximum de points en 3 minutes en résolvant le plus de problèmes possible.'),
     ]),
-    section('Comment jouer', [
-      p('Une opération apparaît. Tape le résultat puis valide.'),
+    section('Les problèmes', [
+      p('Chaque partie enchaîne plusieurs types de problèmes, mélangés au hasard :'),
       list([
-        'Chaque bonne réponse rapporte 1 point.',
-        'Une mauvaise réponse ne rapporte rien — on passe à la suivante.',
-        'Enchaîne autant de calculs que possible avant la fin du chrono.',
+        'Multiplication (ex. 8 × 12) → 3 points.',
+        'Division qui tombe juste (ex. 51 ÷ 3) → 3 points.',
+        'Calcul en plusieurs étapes (donne/reçoit…) mêlant + et − → 3 points, ou 5 s’il cache un piège (une info inutile à ignorer).',
+        'Équation à résoudre (ex. 2x − 6 = 4, trouve x) → 4 points.',
+        'Problème en toutes lettres, souvent piégé → 10 points.',
+      ]),
+    ]),
+    section('Le score', [
+      p('Tape ta réponse sur le pavé numérique puis valide avec ✓.'),
+      list([
+        'Une bonne réponse rapporte les points du problème.',
+        'Une mauvaise réponse fait perdre 1 point (le score ne descend jamais sous 0).',
+        'La touche − sert pour les réponses négatives, ⌫ pour corriger.',
       ]),
     ]),
     section('Défier un ami', [
       p(
-        'Ta suite de calculs et ton score à battre sont encodés dans un lien de partage. ' +
-          "La personne qui l'ouvre joue exactement la même suite et doit dépasser ton score — " +
+        'Ta série de problèmes et ton score à battre sont encodés dans un lien de partage. ' +
+          "La personne qui l'ouvre joue exactement la même série et doit dépasser ton score — " +
           'aucun serveur, tout tient dans le lien.',
       ),
     ]),
-    section('À venir', [
-      p(
-        'Ceci est une version de démonstration servant à valider la chaîne de build et de ' +
-          'déploiement. Le vrai concept de jeu Mathle remplacera bientôt ces règles.',
-      ),
+    section('En plus', [
+      list([
+        'À la fin, « Voir mes réponses » liste chaque question avec ta réponse et la bonne réponse. On peut aussi revoir une partie depuis l’historique.',
+        'Le bouton 🔊 / 🔇 active ou coupe les sons (mémorisé sur l’appareil).',
+      ]),
     ]),
   ]);
 

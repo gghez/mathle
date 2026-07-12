@@ -4,13 +4,27 @@ import { renderGame } from './ui/game';
 import { renderEnd } from './ui/end';
 import { renderRules } from './ui/rules';
 import { renderHistory } from './ui/history';
+import { renderReview } from './ui/review';
 import { Router, type View } from './ui/router';
 import { saveGame } from './history/store';
-import type { GameEngine } from './game/engine';
+import { generateProblems } from './game/challenge';
+import type { GameEngine, Attempt } from './game/engine';
 import './style.css';
 
 function randomSeed(): number {
   return Math.floor(Math.random() * 2 ** 31);
+}
+
+/**
+ * Rebuild a finished round's attempts from its seed and the answers given: the
+ * seed regenerates the exact problems, which we zip with the stored answers.
+ */
+function rebuildAttempts(seed: number, given: number[]): Attempt[] {
+  return generateProblems(seed, given.length).map((problem, i) => ({
+    problem,
+    given: given[i],
+    correct: given[i] === problem.answer,
+  }));
 }
 
 function main(): void {
@@ -28,6 +42,7 @@ function main(): void {
     renderHistory(root, {
       onBack: () => router.back(),
       onReplay: (seed, scoreToBeat) => router.push(gameView(seed, scoreToBeat)),
+      onReview: (seed, given) => router.push(reviewView(rebuildAttempts(seed, given))),
     });
 
   const homeView: View = () =>
@@ -56,8 +71,11 @@ function main(): void {
             score: engine.score,
             answered: engine.answered,
             scoreToBeat,
+            given: engine.attempts.map((a) => a.given),
           });
-          router.replace(endView(engine.score, engine.answered, seed, scoreToBeat));
+          router.replace(
+            endView(engine.score, engine.answered, seed, scoreToBeat, engine.attempts),
+          );
         },
         // Quitting mid-game abandons the run without saving it: lift the
         // back-gesture veto and pop to the launching screen.
@@ -75,8 +93,19 @@ function main(): void {
       };
     };
 
+  const reviewView =
+    (attempts: Attempt[]): View =>
+    () =>
+      renderReview(root, { attempts, onBack: () => router.back() });
+
   const endView =
-    (score: number, answered: number, seed: number, scoreToBeat: number | null): View =>
+    (
+      score: number,
+      answered: number,
+      seed: number,
+      scoreToBeat: number | null,
+      attempts: Attempt[],
+    ): View =>
     () =>
       renderEnd(root, {
         result: { score, answered },
@@ -86,6 +115,7 @@ function main(): void {
         onReplaySame: () => router.replace(gameView(seed, scoreToBeat)),
         onHome: () => router.toRoot(),
         onHelp: () => router.push(rulesView),
+        onReview: () => router.push(reviewView(attempts)),
       });
 
   const params = new URLSearchParams(location.search);

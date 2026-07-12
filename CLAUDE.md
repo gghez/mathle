@@ -4,10 +4,17 @@ French math challenge game: score as many points as possible in a timed round,
 then challenge a friend with a shareable link. Maths sibling of the Boggle PWA,
 built on the same stack.
 
-> **Status: scaffold.** The game concept is not final yet. `src/game/` holds a
-> **placeholder** (mental arithmetic) marked with `PLACEHOLDER` banners. When
-> the real concept is defined, replace that logic; the app shell (router, share,
-> history, screens) is concept-agnostic.
+> **Concept.** A 3-minute round mixes several exercise types with a
+> differentiated point scale — multiplication (+3), exact division (+3), a
+> multi-step +/− story (+3, or +5 with a distractor trap), an equation `ax±b=c`
+> (+4), and non-trivial worded problems (+10); a wrong answer costs 1 point. All
+> problems are generated deterministically from the seed
+> (`src/game/challenge.ts`); the finished round can be reviewed answer-by-answer
+> (`src/ui/review.ts`), from the end screen or from history (a game record stores
+> the answers given, and the seed regenerates the problems). Answers play a
+> synthesised win/lose cue with a persisted mute toggle (`src/audio/sfx.ts`). The
+> app shell (router, share, history, screens) is concept-agnostic and speaks only
+> in terms of `Challenge = seed + scoreToBeat`.
 
 ## Stack
 
@@ -27,7 +34,7 @@ built on the same stack.
 
 ## Rules
 
-Placeholder rules live in `docs/RULES.md` and are readable in-app on a dedicated
+Rules live in `docs/RULES.md` and are readable in-app on a dedicated
 screen (`src/ui/rules.ts`) reachable via the "?" help button.
 
 ## Scripts

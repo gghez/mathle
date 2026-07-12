@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#4f46e5" />
+  <g>
+    <rect x="96" y="96" width="140" height="140" rx="28" fill="#ffffff" />
+    <rect x="276" y="96" width="140" height="140" rx="28" fill="#e0e7ff" />
+    <rect x="96" y="276" width="140" height="140" rx="28" fill="#e0e7ff" />
+    <rect x="276" y="276" width="140" height="140" rx="28" fill="#ffffff" />
+  </g>
+  <g
+    fill="#4f46e5"
+    font-family="system-ui, Arial, sans-serif"
+    font-weight="800"
+    font-size="104"
+    text-anchor="middle"
+  >
+    <text x="166" y="204">+</text>
+    <text x="346" y="200">−</text>
+    <text x="166" y="384">×</text>
+    <text x="346" y="384">÷</text>
+  </g>
+</svg>

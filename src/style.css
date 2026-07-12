@@ -1,0 +1,683 @@
+:root {
+  /* Mathle palette: a cool indigo scheme — chalkboard-meets-notebook, distinct
+     from Boggle's warm cream/gold. */
+  --bg: #eef2ff; /* indigo page */
+  --surface: #ffffff; /* cards, tiles */
+  --surface-2: #e0e7ff; /* secondary buttons, chips */
+  --primary: #4f46e5; /* indigo — primary button, active tile, progress */
+  --primary-press: #4338ca;
+  --brand: #7c3aed; /* violet — wordmark, markers */
+  --text: #1e1b2e; /* near-black indigo — body copy */
+  --muted: #6b7280; /* grey — subtitles, hints */
+  --good: #16a34a; /* correct answer — green */
+  --bad: #dc2626; /* wrong answer — red */
+  --gap: 8px;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  /* The app is a fixed viewport-height frame: the page itself must never
+     scroll. Only in-app lists (.history-list / .rules-content) scroll. */
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  overscroll-behavior: none;
+}
+
+#app {
+  height: 100vh; /* fallback for browsers without dvh */
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  gap: 16px;
+}
+
+.screen--home,
+.screen--loading,
+.screen--end-center {
+  justify-content: center;
+  text-align: center;
+}
+
+.title {
+  font-size: 2.4rem;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+/* Home title spelled out on tiles — the signature Mathle wordmark. */
+.brand-tiles {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  letter-spacing: 0;
+}
+
+.brand-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(46px, 13vw, 68px);
+  aspect-ratio: 1 / 1;
+  background: var(--surface);
+  color: var(--primary);
+  border-radius: 14px;
+  font-size: clamp(1.7rem, 8vw, 2.6rem);
+  font-weight: 800;
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, 0.9),
+    0 4px 0 rgba(79, 70, 229, 0.22),
+    0 8px 12px rgba(30, 27, 46, 0.18);
+  animation: tile-drop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.3) backwards;
+}
+
+.brand-tile:nth-child(1) {
+  transform: rotate(-6deg);
+  animation-delay: 0s;
+}
+.brand-tile:nth-child(2) {
+  transform: rotate(4deg);
+  animation-delay: 0.06s;
+}
+.brand-tile:nth-child(3) {
+  transform: rotate(-3deg);
+  animation-delay: 0.12s;
+}
+.brand-tile:nth-child(4) {
+  transform: rotate(5deg);
+  animation-delay: 0.18s;
+}
+.brand-tile:nth-child(5) {
+  transform: rotate(-5deg);
+  animation-delay: 0.24s;
+}
+.brand-tile:nth-child(6) {
+  transform: rotate(3deg);
+  animation-delay: 0.3s;
+}
+
+@keyframes tile-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-24px) rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-tile {
+    animation: none;
+  }
+}
+
+.subtitle {
+  color: var(--muted);
+  margin: 0;
+}
+
+.praise-emoji {
+  font-size: 3.5rem;
+  line-height: 1;
+  animation: praise-pop 0.5s ease-out;
+}
+
+@keyframes praise-pop {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Buttons */
+.btn {
+  appearance: none;
+  border: none;
+  border-radius: 14px;
+  padding: 14px 22px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface-2);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.btn--primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn--primary:active {
+  background: var(--primary-press);
+}
+
+.btn--danger {
+  background: var(--bad);
+  color: #fff;
+}
+
+/* Confirm dialog (quitting a game in progress). Covers the whole screen so the
+   game underneath — including the still-running timer — stays hidden. */
+.confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(30, 27, 46, 0.55);
+}
+
+.confirm__box {
+  width: 100%;
+  max-width: 340px;
+  background: var(--surface);
+  border-radius: 18px;
+  padding: 22px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.confirm__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.confirm__text {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.confirm__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.confirm__actions .btn {
+  flex: 1;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Game header */
+.game-header {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.1rem;
+}
+
+.quit-btn {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--muted);
+  background: var(--surface-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.timer {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+.timer--low {
+  color: var(--bad);
+}
+
+.score {
+  font-weight: 700;
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Progress bar (challenge only: run toward the score to beat) */
+.progress {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.progress__bar {
+  position: relative;
+  height: 12px;
+  background: var(--surface);
+  border-radius: 999px;
+  overflow: visible;
+}
+
+.progress__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: var(--primary);
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.progress__fill--ahead {
+  background: var(--good);
+}
+
+.progress__marker {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 3px;
+  margin-left: -1.5px;
+  background: var(--brand);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.progress__label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Play screen: the puzzle sits centred in the leftover space. */
+.screen--game {
+  justify-content: flex-start;
+}
+
+.puzzle {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+}
+
+.problem-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.problem {
+  font-size: clamp(2.6rem, 14vw, 4rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 2px;
+  padding: 16px 28px;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 6px 18px rgba(30, 27, 46, 0.1);
+}
+
+.problem--good {
+  animation: flash-good 0.3s ease;
+}
+.problem--bad {
+  animation: flash-bad 0.3s ease;
+}
+@keyframes flash-good {
+  50% {
+    background: var(--good);
+    color: #fff;
+    transform: scale(1.04);
+  }
+}
+@keyframes flash-bad {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    background: var(--bad);
+    color: #fff;
+    transform: translateX(-6px);
+  }
+  75% {
+    background: var(--bad);
+    color: #fff;
+    transform: translateX(6px);
+  }
+}
+
+.answer-form {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 340px;
+}
+
+.answer-input {
+  flex: 1;
+  min-width: 0;
+  appearance: none;
+  border: 2px solid var(--surface-2);
+  border-radius: 14px;
+  padding: 14px 18px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.answer-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.answer-submit {
+  flex-shrink: 0;
+}
+
+/* Loading */
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 4px solid var(--surface-2);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 32px;
+  transform: translate(-50%, 20px);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 10px 18px;
+  border-radius: 12px;
+  opacity: 0;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+  z-index: 10;
+}
+
+.toast--in {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* End screen */
+.end-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+}
+.end-summary__praise {
+  font-weight: 700;
+  font-size: 1.4rem;
+}
+.end-summary__stats {
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+.end-verdict {
+  font-weight: 700;
+  font-size: 1rem;
+}
+.end-verdict--win {
+  color: var(--good);
+}
+.end-verdict--lose {
+  color: var(--muted);
+}
+
+.actions--end {
+  width: 100%;
+  max-width: 480px;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+.actions--end .btn {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 8px;
+  font-size: 0.95rem;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+/* Help / home round buttons, pinned to the screen corners. */
+.screen--home,
+.screen--end {
+  position: relative;
+}
+
+.help-btn,
+.home-btn {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  z-index: 8;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--surface-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.help-btn {
+  right: max(12px, env(safe-area-inset-right));
+}
+
+.home-btn {
+  left: max(12px, env(safe-area-inset-left));
+}
+
+/* Rules page */
+.screen--rules {
+  justify-content: flex-start;
+}
+
+.rules-header {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.rules-title {
+  font-size: 1.6rem;
+  margin: 0;
+}
+
+.rules-back {
+  padding: 8px 14px;
+  font-size: 0.95rem;
+}
+
+.rules-content {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  max-width: 480px;
+  overflow-y: auto;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.rules-section__title {
+  font-size: 1.1rem;
+  margin: 0 0 6px;
+}
+
+.rules-p {
+  margin: 0 0 6px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.rules-list {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* History page */
+.screen--history {
+  justify-content: flex-start;
+}
+
+.history-header {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.history-title {
+  flex: 1;
+  font-size: 1.6rem;
+  margin: 0;
+}
+
+.history-back,
+.history-clear {
+  padding: 8px 14px;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.history-list {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  max-width: 480px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-empty {
+  color: var(--muted);
+  text-align: center;
+  margin-top: 24px;
+}
+
+.history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 10px 14px;
+  text-align: left;
+}
+
+.history-row__date {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.history-row__stats {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.history-row__badge {
+  color: var(--brand);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.history-row__actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.history-row__btn {
+  padding: 8px 10px;
+  font-size: 1rem;
+}

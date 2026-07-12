@@ -1,7 +1,8 @@
 import { el, clear } from './dom';
 import { Countdown } from '../game/timer';
 import { GameEngine } from '../game/engine';
-import { generateProblems, formatProblem, ROUND_SECONDS } from '../game/challenge';
+import { generateProblems, ROUND_SECONDS } from '../game/challenge';
+import { isSoundEnabled, toggleSound, playCorrect, playWrong } from '../audio/sfx';
 
 export interface GameOptions {
   seed: number;
@@ -11,12 +12,13 @@ export interface GameOptions {
 }
 
 /**
- * Render the play screen. Returns a teardown that stops the countdown, so the
- * router can safely leave the screen (quit, or timer → end) without leaks.
+ * Render the play screen. Returns a teardown that stops the countdown and
+ * detaches the keyboard listener, so the router can safely leave the screen
+ * (quit, or timer → end) without leaks.
  *
- * PLACEHOLDER: the on-screen puzzle is mental arithmetic (see game/challenge).
- * The screen shell — header, timer, challenge progress bar, end wiring — is the
- * part meant to survive when the real Mathle concept replaces the puzzle.
+ * The puzzle is a mixed stream of the exercise types (see game/challenge).
+ * Answers are entered on a custom numeric keypad — no native input — so the flow
+ * is identical on desktop and mobile.
  */
 export function renderGame(root: HTMLElement, opts: GameOptions): () => void {
   const { seed, scoreToBeat, onEnd, onQuit } = opts;
@@ -24,11 +26,24 @@ export function renderGame(root: HTMLElement, opts: GameOptions): () => void {
 
   const engine = new GameEngine(generateProblems(seed));
 
-  // Header: quit · timer · score.
+  // Header: (quit · sound) · timer · score.
   const timerEl = el('span', { className: 'timer', textContent: formatTime(ROUND_SECONDS) });
   const scoreEl = el('span', { className: 'score', textContent: '0' });
   const quitBtn = el('button', { className: 'btn quit-btn', textContent: '✕', title: 'Quitter' });
-  const header = el('div', { className: 'game-header' }, [quitBtn, timerEl, scoreEl]);
+  const soundBtn = el('button', { className: 'btn quit-btn sound-btn', title: 'Sons' });
+  function renderSoundIcon(): void {
+    soundBtn.textContent = isSoundEnabled() ? '🔊' : '🔇';
+  }
+  renderSoundIcon();
+  soundBtn.addEventListener('click', () => {
+    toggleSound();
+    renderSoundIcon();
+  });
+  const header = el('div', { className: 'game-header' }, [
+    el('div', { className: 'game-header__left' }, [quitBtn, soundBtn]),
+    timerEl,
+    scoreEl,
+  ]);
 
   // Challenge progress bar (only when there is a score to beat).
   let progressFill: HTMLElement | null = null;
@@ -45,24 +60,41 @@ export function renderGame(root: HTMLElement, opts: GameOptions): () => void {
     progress = el('div', { className: 'progress' }, [bar, label]);
   }
 
-  // The puzzle: a problem, a numeric field, a submit button.
-  const problemEl = el('div', { className: 'problem', textContent: formatProblem(engine.current) });
-  const input = el('input', {
-    className: 'answer-input',
-    type: 'text',
-    inputMode: 'numeric',
-    autocomplete: 'off',
-  });
-  input.setAttribute('inputmode', 'numeric');
-  input.setAttribute('pattern', '-?[0-9]*');
-  const submitBtn = el('button', {
-    className: 'btn btn--primary answer-submit',
-    textContent: 'Valider',
-  });
+  // The puzzle: a points badge, the statement, an answer display, a keypad.
+  const pointsEl = el('div', { className: 'problem-points' });
+  const problemEl = el('div', { className: 'problem' });
+  const displayEl = el('div', { className: 'answer-display' });
+  const keypad = el('div', { className: 'keypad' });
+
+  let entry = '';
+
   const puzzle = el('div', { className: 'puzzle' }, [
-    el('div', { className: 'problem-wrap' }, [problemEl]),
-    el('form', { className: 'answer-form' }, [input, submitBtn]),
+    el('div', { className: 'problem-wrap' }, [pointsEl, problemEl]),
+    el('div', { className: 'answer-pad' }, [displayEl, keypad]),
   ]);
+
+  function renderProblem(): void {
+    const p = engine.current;
+    clear(problemEl);
+    // Worded statements (chains, word problems) wrap; bare expressions stay large.
+    problemEl.classList.toggle('problem--word', p.kind === 'chain' || p.kind === 'word');
+    problemEl.classList.toggle('problem--eq', p.kind === 'equation');
+    if (p.kind === 'equation') {
+      // Equations state no explicit question — spell out what's expected.
+      problemEl.append(
+        el('span', { className: 'problem-eq__expr', textContent: p.prompt }),
+        el('span', { className: 'problem-hint', textContent: 'Combien vaut x ?' }),
+      );
+    } else {
+      problemEl.textContent = p.prompt;
+    }
+    pointsEl.textContent = `+${p.points}`;
+  }
+
+  function renderDisplay(): void {
+    displayEl.textContent = entry === '' ? ' ' : entry;
+    displayEl.classList.toggle('answer-display--empty', entry === '');
+  }
 
   function refresh(): void {
     scoreEl.textContent = String(engine.score);
@@ -75,12 +107,6 @@ export function renderGame(root: HTMLElement, opts: GameOptions): () => void {
     }
   }
 
-  function nextProblem(): void {
-    problemEl.textContent = formatProblem(engine.current);
-    input.value = '';
-    input.focus();
-  }
-
   function flash(kind: 'good' | 'bad'): void {
     problemEl.classList.remove('problem--good', 'problem--bad');
     // Reflow so the class re-triggers the animation on rapid repeats.
@@ -88,23 +114,82 @@ export function renderGame(root: HTMLElement, opts: GameOptions): () => void {
     problemEl.classList.add(kind === 'good' ? 'problem--good' : 'problem--bad');
   }
 
+  function nextProblem(): void {
+    entry = '';
+    renderProblem();
+    renderDisplay();
+  }
+
+  // A floating "+N" that pops out of the score and rises as it fades — the
+  // reward beat that makes a good answer feel good.
+  function popScore(delta: number): void {
+    const rect = scoreEl.getBoundingClientRect();
+    const pop = el('div', { className: 'score-pop', textContent: `+${delta}` });
+    pop.style.left = `${rect.left + rect.width / 2}px`;
+    pop.style.top = `${rect.top}px`;
+    document.body.append(pop);
+    pop.addEventListener('animationend', () => pop.remove());
+    // Give the live counter a quick bump in sympathy.
+    scoreEl.classList.remove('score--bump');
+    void scoreEl.offsetWidth;
+    scoreEl.classList.add('score--bump');
+  }
+
   function handleSubmit(): void {
-    const raw = input.value.trim();
-    if (raw === '' || Number.isNaN(Number(raw))) {
-      input.focus();
-      return;
-    }
-    const { correct } = engine.submit(Number(raw));
+    // Ignore an empty or sign-only entry — nothing to grade.
+    if (entry === '' || entry === '-' || Number.isNaN(Number(entry))) return;
+    // Number() already drops superfluous leading zeros ("012" → 12).
+    const { correct, delta } = engine.submit(Number(entry));
     flash(correct ? 'good' : 'bad');
+    if (correct) playCorrect();
+    else playWrong();
+    if (delta > 0) popScore(delta);
     refresh();
     nextProblem();
   }
 
-  const form = puzzle.querySelector('form');
-  form?.addEventListener('submit', (e) => {
+  // Keypad actions on the current entry.
+  function press(key: string): void {
+    if (key === 'ok') {
+      handleSubmit();
+      return;
+    }
+    if (key === 'back') entry = entry.slice(0, -1);
+    else if (key === 'sign') entry = entry.startsWith('-') ? entry.slice(1) : `-${entry}`;
+    else if (entry === '0')
+      entry = key; // a digit — no superfluous leading zero
+    else if (entry === '-0') entry = `-${key}`;
+    else entry += key;
+    renderDisplay();
+  }
+
+  function keyBtn(label: string, key: string, extra = ''): HTMLButtonElement {
+    const b = el('button', {
+      className: `keypad__key ${extra}`.trim(),
+      textContent: label,
+      type: 'button',
+    });
+    b.addEventListener('click', () => press(key));
+    return b;
+  }
+
+  // Digits 1-9, then the bottom row: sign · 0 · backspace, then a wide validate.
+  for (const d of ['1', '2', '3', '4', '5', '6', '7', '8', '9']) keypad.append(keyBtn(d, d));
+  keypad.append(keyBtn('−', 'sign', 'keypad__key--action'));
+  keypad.append(keyBtn('0', '0'));
+  keypad.append(keyBtn('⌫', 'back', 'keypad__key--action'));
+  keypad.append(keyBtn('✓ Valider', 'ok', 'keypad__key--ok'));
+
+  // Physical keyboard support (desktop): digits, minus, Backspace, Enter.
+  function onKeydown(e: KeyboardEvent): void {
+    if (e.key >= '0' && e.key <= '9') press(e.key);
+    else if (e.key === '-') press('sign');
+    else if (e.key === 'Backspace') press('back');
+    else if (e.key === 'Enter') press('ok');
+    else return;
     e.preventDefault();
-    handleSubmit();
-  });
+  }
+  document.addEventListener('keydown', onKeydown);
 
   const countdown = new Countdown(
     ROUND_SECONDS,
@@ -148,11 +233,15 @@ export function renderGame(root: HTMLElement, opts: GameOptions): () => void {
   children.push(puzzle);
   root.append(el('div', { className: 'screen screen--game' }, children));
 
+  renderProblem();
+  renderDisplay();
   refresh();
-  input.focus();
   countdown.start();
 
-  return () => countdown.stop();
+  return () => {
+    countdown.stop();
+    document.removeEventListener('keydown', onKeydown);
+  };
 }
 
 function formatTime(seconds: number): string {

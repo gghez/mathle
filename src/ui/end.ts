@@ -15,22 +15,24 @@ export interface EndOptions {
   onReplaySame: () => void;
   onHome: () => void;
   onHelp: () => void;
+  /** Open the answer review; omitted when there is nothing to review. */
+  onReview?: () => void;
 }
 
-/** A congratulation line scaled to the raw score. Tune when the concept lands. */
+/** A congratulation line scaled to the raw score. Tunable as balance settles. */
 function praiseFor(score: number): { text: string; emoji: string } {
-  if (score >= 40) return { text: 'Surhumain !', emoji: '👑' };
-  if (score >= 30) return { text: 'Légendaire !', emoji: '🏆' };
-  if (score >= 20) return { text: 'Impressionnant !', emoji: '🌟' };
-  if (score >= 12) return { text: 'Excellent !', emoji: '🔥' };
-  if (score >= 6) return { text: 'Joli score !', emoji: '👏' };
+  if (score >= 150) return { text: 'Surhumain !', emoji: '👑' };
+  if (score >= 100) return { text: 'Légendaire !', emoji: '🏆' };
+  if (score >= 60) return { text: 'Impressionnant !', emoji: '🌟' };
+  if (score >= 35) return { text: 'Excellent !', emoji: '🔥' };
+  if (score >= 15) return { text: 'Joli score !', emoji: '👏' };
   if (score > 0) return { text: "C'est un début…", emoji: '🌱' };
   return { text: 'Rien marqué… on retente ?', emoji: '😅' };
 }
 
 /** Render the end-of-game summary. */
 export function renderEnd(root: HTMLElement, opts: EndOptions): void {
-  const { result, seed, scoreToBeat, onNewGame, onReplaySame, onHome, onHelp } = opts;
+  const { result, seed, scoreToBeat, onNewGame, onReplaySame, onHome, onHelp, onReview } = opts;
   clear(root);
 
   const praise = praiseFor(result.score);
@@ -95,12 +97,17 @@ export function renderEnd(root: HTMLElement, opts: EndOptions): void {
     onclick: onHome,
   });
 
-  root.append(
-    el('div', { className: 'screen screen--end screen--end-center' }, [
-      homeBtn,
-      helpBtn,
-      summary,
-      actions,
-    ]),
-  );
+  const children: (Node | string)[] = [homeBtn, helpBtn, summary];
+  if (onReview && result.answered > 0) {
+    children.push(
+      el('button', {
+        className: 'btn end-review-btn',
+        textContent: '📋 Voir mes réponses',
+        onclick: onReview,
+      }),
+    );
+  }
+  children.push(actions);
+
+  root.append(el('div', { className: 'screen screen--end screen--end-center' }, children));
 }

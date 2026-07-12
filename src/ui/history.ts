@@ -4,6 +4,8 @@ import { listGames, deleteGame, clearHistory, type GameRecord } from '../history
 export interface HistoryOptions {
   onBack: () => void;
   onReplay: (seed: number, scoreToBeat: number | null) => void;
+  /** Open the answer review for a past game (seed + the answers given). */
+  onReview: (seed: number, given: number[]) => void;
 }
 
 function formatDate(iso: string): string {
@@ -39,6 +41,18 @@ export function renderHistory(root: HTMLElement, opts: HistoryOptions): void {
         }),
       );
     }
+    const actions: HTMLElement[] = [];
+    if (record.given && record.given.length > 0) {
+      const given = record.given;
+      actions.push(
+        el('button', {
+          className: 'btn history-row__btn',
+          textContent: '📋',
+          title: 'Revoir les réponses',
+          onclick: () => opts.onReview(record.seed, given),
+        }),
+      );
+    }
     const replayBtn = el('button', {
       className: 'btn history-row__btn',
       textContent: '🔁',
@@ -54,9 +68,10 @@ export function renderHistory(root: HTMLElement, opts: HistoryOptions): void {
         render();
       },
     });
+    actions.push(replayBtn, deleteBtn);
     return el('div', { className: 'history-row' }, [
       info,
-      el('div', { className: 'history-row__actions' }, [replayBtn, deleteBtn]),
+      el('div', { className: 'history-row__actions' }, actions),
     ]);
   }
 

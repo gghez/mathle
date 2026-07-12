@@ -10,6 +10,12 @@ export interface GameRecord {
   answered: number;
   /** Score to beat if this was a challenge, null for a plain game. */
   scoreToBeat: number | null;
+  /**
+   * The answers the player gave, in order. Combined with the seed (which
+   * regenerates the exact problems) this is enough to rebuild a full review.
+   * Optional so records saved before this field remain valid.
+   */
+  given?: number[];
 }
 
 const STORAGE_KEY = 'mathle:history';

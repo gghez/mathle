@@ -130,6 +130,65 @@ describe('generateProblems', () => {
   });
 });
 
+describe('generateProblems (easy mode)', () => {
+  it('is deterministic for a given seed', () => {
+    expect(generateProblems(12345, 20, 'easy')).toEqual(generateProblems(12345, 20, 'easy'));
+  });
+
+  it('differs from medium for the same seed', () => {
+    expect(generateProblems(12345, 40, 'easy')).not.toEqual(generateProblems(12345, 40, 'medium'));
+  });
+
+  it('never produces equations', () => {
+    const kinds = new Set(generateProblems(999, 400, 'easy').map((p) => p.kind));
+    expect(kinds.has('equation')).toBe(false);
+  });
+
+  it('still mixes multiplication, division, chains and words', () => {
+    const kinds = new Set(generateProblems(999, 400, 'easy').map((p) => p.kind));
+    expect(kinds).toEqual(new Set<ProblemKind>(['mul', 'div', 'chain', 'word']));
+  });
+
+  it('multiplies operands in [-12, 12] (full range, like medium)', () => {
+    for (const p of generateProblems(4141, 400, 'easy')) {
+      if (p.kind !== 'mul') continue;
+      const [a, b] = operands(p.prompt, '×');
+      for (const n of [a, b]) {
+        expect(n).toBeGreaterThanOrEqual(-12);
+        expect(n).toBeLessThanOrEqual(12);
+      }
+    }
+  });
+
+  it('divides exactly with a dividend magnitude ≤ 30 and divisor magnitude ≤ 5', () => {
+    for (const p of generateProblems(5252, 400, 'easy')) {
+      if (p.kind !== 'div') continue;
+      const [a, b] = operands(p.prompt, '÷');
+      expect(Math.abs(a)).toBeLessThanOrEqual(30);
+      expect(Math.abs(b)).toBeLessThanOrEqual(5);
+      expect(p.answer).toBe(a / b);
+    }
+  });
+
+  it('produces only plain (trap-free, 3-point) chains', () => {
+    for (const p of generateProblems(4242, 400, 'easy')) {
+      if (p.kind !== 'chain') continue;
+      expect(p.points).toBe(3);
+      expect(/doit|de son côté/.test(p.prompt)).toBe(false);
+      expect(evalChain(p.prompt)).toBe(p.answer);
+    }
+  });
+
+  it('keeps worded answers positive integers', () => {
+    for (const p of generateProblems(56789, 400, 'easy')) {
+      if (p.kind !== 'word') continue;
+      expect(p.answer).toBeGreaterThan(0);
+      expect(Number.isInteger(p.answer)).toBe(true);
+      expect(p.prompt.endsWith('?')).toBe(true);
+    }
+  });
+});
+
 describe('formatProblem', () => {
   it('returns the pre-rendered statement', () => {
     const p: Problem = { kind: 'equation', prompt: '2x − 6 = 4', answer: 5, points: 4 };

@@ -1,11 +1,18 @@
 import { el, clear } from './dom';
-import { listGames, deleteGame, clearHistory, type GameRecord } from '../history/store';
+import {
+  listGames,
+  deleteGame,
+  clearHistory,
+  recordDifficulty,
+  type GameRecord,
+} from '../history/store';
+import type { Difficulty } from '../game/challenge';
 
 export interface HistoryOptions {
   onBack: () => void;
-  onReplay: (seed: number, scoreToBeat: number | null) => void;
-  /** Open the answer review for a past game (seed + the answers given). */
-  onReview: (seed: number, given: number[]) => void;
+  onReplay: (seed: number, scoreToBeat: number | null, difficulty: Difficulty) => void;
+  /** Open the answer review for a past game (seed + mode + the answers given). */
+  onReview: (seed: number, given: number[], difficulty: Difficulty) => void;
 }
 
 function formatDate(iso: string): string {
@@ -33,6 +40,10 @@ export function renderHistory(root: HTMLElement, opts: HistoryOptions): void {
         textContent: `${record.score} pts · ${record.answered} réponses`,
       }),
     ]);
+    const difficulty = recordDifficulty(record);
+    if (difficulty === 'easy') {
+      info.append(el('div', { className: 'history-row__mode', textContent: 'Facile' }));
+    }
     if (record.scoreToBeat != null) {
       info.append(
         el('div', {
@@ -49,7 +60,7 @@ export function renderHistory(root: HTMLElement, opts: HistoryOptions): void {
           className: 'btn history-row__btn',
           textContent: '📋',
           title: 'Revoir les réponses',
-          onclick: () => opts.onReview(record.seed, given),
+          onclick: () => opts.onReview(record.seed, given, difficulty),
         }),
       );
     }
@@ -57,7 +68,7 @@ export function renderHistory(root: HTMLElement, opts: HistoryOptions): void {
       className: 'btn history-row__btn',
       textContent: '🔁',
       title: 'Rejouer',
-      onclick: () => opts.onReplay(record.seed, record.scoreToBeat),
+      onclick: () => opts.onReplay(record.seed, record.scoreToBeat, difficulty),
     });
     const deleteBtn = el('button', {
       className: 'btn history-row__btn',

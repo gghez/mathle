@@ -1,3 +1,5 @@
+import { DEFAULT_DIFFICULTY, type Difficulty } from '../game/challenge';
+
 /** A completed game, as logged to the local history. */
 export interface GameRecord {
   id: string;
@@ -11,11 +13,22 @@ export interface GameRecord {
   /** Score to beat if this was a challenge, null for a plain game. */
   scoreToBeat: number | null;
   /**
+   * The mode the round was played in. Needed alongside the seed to regenerate
+   * the exact problems for a replay or review. Optional so records saved before
+   * this field remain valid — they default to medium (the only prior mode).
+   */
+  difficulty?: Difficulty;
+  /**
    * The answers the player gave, in order. Combined with the seed (which
    * regenerates the exact problems) this is enough to rebuild a full review.
    * Optional so records saved before this field remain valid.
    */
   given?: number[];
+}
+
+/** A record's difficulty, defaulting to medium for pre-difficulty entries. */
+export function recordDifficulty(record: GameRecord): Difficulty {
+  return record.difficulty ?? DEFAULT_DIFFICULTY;
 }
 
 const STORAGE_KEY = 'mathle:history';

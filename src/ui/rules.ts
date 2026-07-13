@@ -39,6 +39,13 @@ export function renderRules(root: HTMLElement, opts: RulesOptions): void {
     section('Objectif', [
       p('Marque un maximum de points en 3 minutes en résolvant le plus de problèmes possible.'),
     ]),
+    section('Difficulté', [
+      p('Avant de lancer une partie, choisis le mode (il est mémorisé) :'),
+      list([
+        'Moyen : le jeu complet décrit ci-dessous.',
+        'Facile : pour les plus jeunes — sans équations, sans pièges, avec des nombres plus petits pour ×, ÷ et les calculs en plusieurs étapes (les négatifs restent). Un lien de défi ou une partie rejouée garde toujours son mode.',
+      ]),
+    ]),
     section('Les problèmes', [
       p('Chaque partie enchaîne plusieurs types de problèmes, mélangés au hasard :'),
       list([

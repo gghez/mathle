@@ -141,6 +141,36 @@ body {
   margin: 0;
 }
 
+/* Home difficulty picker — a segmented Facile / Moyen control. */
+.mode-label {
+  margin: 4px 0 -6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.mode-picker {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 16px;
+  background: var(--surface-2);
+}
+
+.mode-btn {
+  background: transparent;
+  color: var(--muted);
+  padding: 10px 20px;
+}
+
+.mode-btn--active {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(30, 27, 46, 0.18);
+}
+
 .praise-emoji {
   font-size: 3.5rem;
   line-height: 1;
@@ -551,6 +581,11 @@ body {
   color: var(--muted);
   font-size: 1.05rem;
 }
+.end-summary__mode {
+  color: var(--brand);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
 .end-verdict {
   font-weight: 700;
   font-size: 1rem;
@@ -736,6 +771,17 @@ body {
   font-size: 0.8rem;
   font-weight: 600;
   margin-top: 2px;
+}
+
+.history-row__mode {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .history-row__actions {

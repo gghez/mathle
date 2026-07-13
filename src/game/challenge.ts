@@ -150,19 +150,28 @@ function chainProblem(rng: () => number, withTrap: boolean): Problem {
     }
   }
 
-  if (withTrap) {
-    // A clause that names a number but does not change the count.
-    const d = intBetween(rng, 2, 9);
-    const other = pick(rng, NAMES);
-    const distractor = pick(rng, [`on lui en doit ${d}`, `${other} en a ${d} de son côté`]);
-    parts.splice(intBetween(rng, 0, parts.length), 0, distractor);
-  }
-
   const ops =
     parts.length === 1
       ? parts[0]
       : `${parts.slice(0, -1).join(', ')} et ${parts[parts.length - 1]}`;
-  const prompt = `${name} a ${start} ${noun}, ${ops}. Combien ${deOf(noun)} a ${name} à la fin ?`;
+  let prompt = `${name} a ${start} ${noun}, ${ops}.`;
+
+  if (withTrap) {
+    // A distractor that names a number but leaves the subject's count untouched.
+    // Kept as its own sentence — never inlined among the operations — so it can't
+    // steal the subject of a following clause and be misread as a real step (a
+    // named person is drawn from everyone *but* the subject, to avoid a
+    // contradictory "X … X en a d de son côté").
+    const d = intBetween(rng, 2, 9);
+    const other = pick(
+      rng,
+      NAMES.filter((n) => n !== name),
+    );
+    const distractor = pick(rng, [`On lui en doit ${d}`, `${other} en a ${d} de son côté`]);
+    prompt += ` ${distractor}.`;
+  }
+
+  prompt += ` Combien ${deOf(noun)} a ${name} à la fin ?`;
   return { kind: 'chain', prompt, answer: total, points: withTrap ? 5 : 3 };
 }
 

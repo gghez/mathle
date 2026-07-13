@@ -120,19 +120,62 @@ export function renderGame(root: HTMLElement, opts: GameOptions): () => void {
     renderDisplay();
   }
 
-  // A floating "+N" that pops out of the score and rises as it fades — the
-  // reward beat that makes a good answer feel good.
-  function popScore(delta: number): void {
-    const rect = scoreEl.getBoundingClientRect();
-    const pop = el('div', { className: 'score-pop', textContent: `+${delta}` });
-    pop.style.left = `${rect.left + rect.width / 2}px`;
-    pop.style.top = `${rect.top}px`;
-    document.body.append(pop);
-    pop.addEventListener('animationend', () => pop.remove());
-    // Give the live counter a quick bump in sympathy.
+  // Bump the live score counter — the little "it landed" beat.
+  function bumpScore(): void {
     scoreEl.classList.remove('score--bump');
     void scoreEl.offsetWidth;
     scoreEl.classList.add('score--bump');
+  }
+
+  // A floating "+N" that flies from the current problem's points badge up to
+  // the score counter, so a good answer visibly comes to add itself to the
+  // total. The path is measured at submit time and driven with the Web
+  // Animations API (arbitrary start/end, so no fixed CSS keyframes).
+  function popScore(delta: number): void {
+    const from = pointsEl.getBoundingClientRect();
+    const to = scoreEl.getBoundingClientRect();
+    const startX = from.left + from.width / 2;
+    const startY = from.top + from.height / 2;
+    const dx = to.left + to.width / 2 - startX;
+    const dy = to.top + to.height / 2 - startY;
+
+    const pop = el('div', { className: 'score-pop', textContent: `+${delta}` });
+    pop.style.left = `${startX}px`;
+    pop.style.top = `${startY}px`;
+    document.body.append(pop);
+
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || typeof pop.animate !== 'function') {
+      pop.remove();
+      bumpScore();
+      return;
+    }
+
+    const anim = pop.animate(
+      [
+        {
+          transform: 'translate(-50%, -50%) translate(0px, 0px) scale(0.6)',
+          opacity: 0,
+          offset: 0,
+        },
+        {
+          transform: 'translate(-50%, -50%) translate(0px, 0px) scale(1.2)',
+          opacity: 1,
+          offset: 0.2,
+        },
+        {
+          transform: `translate(-50%, -50%) translate(${dx}px, ${dy}px) scale(0.7)`,
+          opacity: 0,
+          offset: 1,
+        },
+      ],
+      { duration: 700, easing: 'cubic-bezier(0.55, 0, 0.7, 0.35)' },
+    );
+    // Bump the counter as the "+N" reaches it, not before.
+    anim.onfinish = () => {
+      pop.remove();
+      bumpScore();
+    };
   }
 
   function handleSubmit(): void {

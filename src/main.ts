@@ -7,7 +7,7 @@ import { renderHistory } from './ui/history';
 import { renderReview } from './ui/review';
 import { Router, type View } from './ui/router';
 import { saveGame } from './history/store';
-import { generateProblems } from './game/challenge';
+import { generateProblems, type Difficulty } from './game/challenge';
 import type { GameEngine, Attempt } from './game/engine';
 import './style.css';
 
@@ -16,11 +16,12 @@ function randomSeed(): number {
 }
 
 /**
- * Rebuild a finished round's attempts from its seed and the answers given: the
- * seed regenerates the exact problems, which we zip with the stored answers.
+ * Rebuild a finished round's attempts from its seed, mode and the answers
+ * given: the seed and difficulty regenerate the exact problems, which we zip
+ * with the stored answers.
  */
-function rebuildAttempts(seed: number, given: number[]): Attempt[] {
-  return generateProblems(seed, given.length).map((problem, i) => ({
+function rebuildAttempts(seed: number, given: number[], difficulty: Difficulty): Attempt[] {
+  return generateProblems(seed, given.length, difficulty).map((problem, i) => ({
     problem,
     given: given[i],
     correct: given[i] === problem.answer,
@@ -41,40 +42,44 @@ function main(): void {
   const historyView: View = () =>
     renderHistory(root, {
       onBack: () => router.back(),
-      onReplay: (seed, scoreToBeat) => router.push(gameView(seed, scoreToBeat)),
-      onReview: (seed, given) => router.push(reviewView(rebuildAttempts(seed, given))),
+      onReplay: (seed, scoreToBeat, difficulty) =>
+        router.push(gameView(seed, scoreToBeat, difficulty)),
+      onReview: (seed, given, difficulty) =>
+        router.push(reviewView(rebuildAttempts(seed, given, difficulty))),
     });
 
   const homeView: View = () =>
     renderHome(
       root,
-      () => router.push(freshGame()),
+      (difficulty) => router.push(freshGame(difficulty)),
       () => router.push(rulesView),
       () => router.push(historyView),
     );
 
-  // A brand-new game: a fresh random seed, no score to beat.
-  const freshGame = (): View => gameView(randomSeed(), null);
+  // A brand-new game: a fresh random seed, no score to beat, in the chosen mode.
+  const freshGame = (difficulty: Difficulty): View => gameView(randomSeed(), null, difficulty);
 
   // A finished game hands to an end screen that *replaces* the game in history:
   // the game is over, so the back gesture skips it and reaches the screen the
   // game was launched from (home or history).
   const gameView =
-    (seed: number, scoreToBeat: number | null): View =>
+    (seed: number, scoreToBeat: number | null, difficulty: Difficulty): View =>
     () => {
       const teardown = renderGame(root, {
         seed,
         scoreToBeat,
+        difficulty,
         onEnd: (engine: GameEngine) => {
           saveGame({
             seed,
             score: engine.score,
             answered: engine.answered,
             scoreToBeat,
+            difficulty,
             given: engine.attempts.map((a) => a.given),
           });
           router.replace(
-            endView(engine.score, engine.answered, seed, scoreToBeat, engine.attempts),
+            endView(engine.score, engine.answered, seed, scoreToBeat, difficulty, engine.attempts),
           );
         },
         // Quitting mid-game abandons the run without saving it: lift the
@@ -104,6 +109,7 @@ function main(): void {
       answered: number,
       seed: number,
       scoreToBeat: number | null,
+      difficulty: Difficulty,
       attempts: Attempt[],
     ): View =>
     () =>
@@ -111,8 +117,9 @@ function main(): void {
         result: { score, answered },
         seed,
         scoreToBeat,
-        onNewGame: () => router.replace(freshGame()),
-        onReplaySame: () => router.replace(gameView(seed, scoreToBeat)),
+        difficulty,
+        onNewGame: () => router.replace(freshGame(difficulty)),
+        onReplaySame: () => router.replace(gameView(seed, scoreToBeat, difficulty)),
         onHome: () => router.toRoot(),
         onHelp: () => router.push(rulesView),
         onReview: () => router.push(reviewView(attempts)),
@@ -126,7 +133,7 @@ function main(): void {
   // "🏠 Accueil" button reach it even when a challenge link opens into a game.
   router.reset(homeView);
   if (challenge) {
-    router.push(gameView(challenge.seed, challenge.scoreToBeat));
+    router.push(gameView(challenge.seed, challenge.scoreToBeat, challenge.difficulty));
   }
 }
 

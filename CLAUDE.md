@@ -7,8 +7,11 @@ built on the same stack.
 > **Concept.** A 3-minute round mixes several exercise types with a
 > differentiated point scale — multiplication (+3), exact division (+3), a
 > multi-step +/− story (+3, or +5 with a distractor trap), an equation `ax±b=c`
-> (+4), and non-trivial worded problems (+10); a wrong answer costs 1 point. All
-> problems are generated deterministically from the seed
+> (+4), and non-trivial worded problems (+10); a wrong answer costs 1 point. Two
+> difficulty modes, chosen on the home screen and carried in the challenge:
+> `medium` is the full game, `easy` drops equations and traps and tightens the
+> arithmetic ranges (negatives kept) for younger players. All problems are
+> generated deterministically from the seed + difficulty
 > (`src/game/challenge.ts`); the finished round can be reviewed answer-by-answer
 > (`src/ui/review.ts`), from the end screen or from history (a game record stores
 > the answers given, and the seed regenerates the problems). Answers play a

@@ -1,5 +1,6 @@
 import { shareChallenge } from '../share/share';
 import { el, clear, toast } from './dom';
+import type { Difficulty } from '../game/challenge';
 
 /** The finished-game data the end screen renders. */
 export interface GameResult {
@@ -11,6 +12,7 @@ export interface EndOptions {
   result: GameResult;
   seed: number;
   scoreToBeat: number | null;
+  difficulty: Difficulty;
   onNewGame: () => void;
   onReplaySame: () => void;
   onHome: () => void;
@@ -32,7 +34,17 @@ function praiseFor(score: number): { text: string; emoji: string } {
 
 /** Render the end-of-game summary. */
 export function renderEnd(root: HTMLElement, opts: EndOptions): void {
-  const { result, seed, scoreToBeat, onNewGame, onReplaySame, onHome, onHelp, onReview } = opts;
+  const {
+    result,
+    seed,
+    scoreToBeat,
+    difficulty,
+    onNewGame,
+    onReplaySame,
+    onHome,
+    onHelp,
+    onReview,
+  } = opts;
   clear(root);
 
   const praise = praiseFor(result.score);
@@ -45,6 +57,9 @@ export function renderEnd(root: HTMLElement, opts: EndOptions): void {
       textContent: `${result.score} pts · ${result.answered} réponses`,
     }),
   ]);
+  if (difficulty === 'easy') {
+    summary.append(el('span', { className: 'end-summary__mode', textContent: 'Mode facile' }));
+  }
   if (scoreToBeat != null) {
     const beaten = result.score > scoreToBeat;
     const tied = result.score === scoreToBeat;
@@ -61,7 +76,7 @@ export function renderEnd(root: HTMLElement, opts: EndOptions): void {
     textContent: '📤 Défier',
     onclick: async () => {
       try {
-        const res = await shareChallenge({ seed, scoreToBeat: result.score });
+        const res = await shareChallenge({ seed, scoreToBeat: result.score, difficulty });
         if (res === 'copied' || res === 'manual') toast('Lien copié !');
       } catch {
         toast('Le partage a échoué');

@@ -8,16 +8,29 @@ import { mulberry32 } from '../core/rng';
 // the exact same problems in the exact same order — no backend, everything rides
 // in the seed.
 //
-// A round mixes five exercise types with a differentiated point scale:
+// A round mixes several exercise types with a differentiated point scale:
 //   • mul        — a × b                          (+3)
 //   • div        — a ÷ b (exact)                  (+3)
 //   • chain      — worded multi-step +/− story    (+3, or +5 with a trap)
 //   • equation   — ax ± b = c                     (+4)
 //   • word       — worded problem (non-trivial)   (+10)
 // A wrong answer costs 1 point (penalty applied in the engine).
+//
+// Two difficulty modes tune what a round throws at the player:
+//   • 'medium' — the full mix above, the game as originally designed.
+//   • 'easy'   — tuned for younger players: no equations, no traps (plain
+//     chains and only the gentler worded problems), and tighter number ranges
+//     for ×, ÷ and the +/− story (negatives still appear). The difficulty is
+//     part of the challenge, so a shared link replays the same mode.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type ProblemKind = 'mul' | 'div' | 'chain' | 'equation' | 'word';
+
+/** Difficulty of a round. 'medium' is the original game; 'easy' is gentler. */
+export type Difficulty = 'easy' | 'medium';
+
+/** The default mode — what pre-difficulty challenges and links replay as. */
+export const DEFAULT_DIFFICULTY: Difficulty = 'medium';
 
 export interface Problem {
   kind: ProblemKind;
@@ -34,6 +47,8 @@ export interface Challenge {
   seed: number;
   /** Score to beat when the challenge came from a share link; null otherwise. */
   scoreToBeat: number | null;
+  /** Which mode the round is played in — determines the problems generated. */
+  difficulty: Difficulty;
 }
 
 /** Length of a round, in seconds. */
@@ -74,15 +89,19 @@ const NAMES = ['Léa', 'Tom', 'Zoé', 'Hugo', 'Emma', 'Lucas', 'Jade', 'Noah'] a
 
 // ── Multiplication & exact division (quick single-operation drills) ──────────
 
-function makeMul(rng: () => number): Problem {
-  const a = intBetween(rng, -12, 12);
-  const b = intBetween(rng, -12, 12);
+function makeMul(rng: () => number, difficulty: Difficulty): Problem {
+  // Easy keeps a small times-table range; both signs stay in play.
+  const lim = difficulty === 'easy' ? 5 : 12;
+  const a = intBetween(rng, -lim, lim);
+  const b = intBetween(rng, -lim, lim);
   return { kind: 'mul', prompt: `${num(a)} × ${paren(b)}`, answer: a * b, points: 3 };
 }
 
-function makeDiv(rng: () => number): Problem {
-  const d = intBetween(rng, 2, 9); // divisor magnitude — keeps the division mental
-  const q = intBetween(rng, 2, Math.floor(100 / d)); // quotient; dividend stays ≤ 100
+function makeDiv(rng: () => number, difficulty: Difficulty): Problem {
+  const easy = difficulty === 'easy';
+  const d = intBetween(rng, 2, easy ? 5 : 9); // divisor magnitude — keeps it mental
+  const cap = easy ? 30 : 100; // largest dividend magnitude
+  const q = intBetween(rng, 2, Math.floor(cap / d)); // quotient; dividend stays ≤ cap
   const bSign = rng() < 0.5 ? -1 : 1;
   const aSign = rng() < 0.5 ? -1 : 1;
   const b = d * bSign;
@@ -120,20 +139,22 @@ function chainOps(rng: () => number, withTrap: boolean): ChainOp[] {
   return ops;
 }
 
-function chainProblem(rng: () => number, withTrap: boolean): Problem {
+function chainProblem(rng: () => number, withTrap: boolean, difficulty: Difficulty): Problem {
+  const easy = difficulty === 'easy';
+  const step = easy ? 6 : 9; // largest amount given, received or found in one step
   const name = pick(rng, NAMES);
   const noun = pick(rng, CHAIN_ITEMS);
-  const start = intBetween(rng, 8, 20);
+  const start = easy ? intBetween(rng, 6, 14) : intBetween(rng, 8, 20);
   let total = start;
   const parts: string[] = [];
 
   for (const op of chainOps(rng, withTrap)) {
-    if (op === 'give' && Math.min(9, total) >= 1) {
-      const x = intBetween(rng, 1, Math.min(9, total)); // never give more than held
+    if (op === 'give' && Math.min(step, total) >= 1) {
+      const x = intBetween(rng, 1, Math.min(step, total)); // never give more than held
       total -= x;
       parts.push(`en ${pick(rng, ['donne', 'perd'])} ${x}`);
     } else {
-      const x = intBetween(rng, 2, 9);
+      const x = intBetween(rng, 2, step);
       total += x;
       const form = intBetween(rng, 0, 2);
       const giver = pick(
@@ -313,7 +334,12 @@ function wordLegs(rng: () => number): Problem {
   return { kind: 'word', prompt, answer: four, points: 10 };
 }
 
-function makeWord(rng: () => number): Problem {
+function makeWord(rng: () => number, difficulty: Difficulty): Problem {
+  // Easy skips the set-overlap traps, ceiling "+1" and legs-and-heads systems,
+  // keeping only the two straightforward families (recover-the-start, age).
+  if (difficulty === 'easy') {
+    return rng() < 0.5 ? wordReverse(rng) : wordAge(rng);
+  }
   switch (intBetween(rng, 0, 5)) {
     case 0:
       return wordUnionMin(rng);
@@ -331,28 +357,42 @@ function makeWord(rng: () => number): Problem {
 }
 
 /**
- * Draw one problem, choosing its type by weight (chain 25% · mul 20% · div 20% ·
- * equation 15% · word 20%). Within chains, ~40% carry a distractor trap (+5).
- * The type draw and the generator share the same PRNG stream, so the whole
- * round stays reproducible from the seed.
+ * Draw one problem, choosing its type by weight. The type draw and the
+ * generator share the same PRNG stream, so the whole round stays reproducible
+ * from the seed.
+ *
+ * Medium: chain 25% · mul 20% · div 20% · equation 15% · word 20%; ~40% of
+ * chains carry a distractor trap (+5).
+ * Easy: chain 25% · mul 30% · div 30% · word 15%; no equations, and chains
+ * never carry a trap — the equation share is folded into the arithmetic drills.
  */
-function makeProblem(rng: () => number): Problem {
+function makeProblem(rng: () => number, difficulty: Difficulty): Problem {
   const r = rng();
-  if (r < 0.25) return chainProblem(rng, rng() < 0.4);
-  if (r < 0.45) return makeMul(rng);
-  if (r < 0.65) return makeDiv(rng);
+  if (difficulty === 'easy') {
+    if (r < 0.25) return chainProblem(rng, false, 'easy');
+    if (r < 0.55) return makeMul(rng, 'easy');
+    if (r < 0.85) return makeDiv(rng, 'easy');
+    return makeWord(rng, 'easy');
+  }
+  if (r < 0.25) return chainProblem(rng, rng() < 0.4, 'medium');
+  if (r < 0.45) return makeMul(rng, 'medium');
+  if (r < 0.65) return makeDiv(rng, 'medium');
   if (r < 0.8) return makeEquation(rng);
-  return makeWord(rng);
+  return makeWord(rng, 'medium');
 }
 
 /**
- * Deterministically derive the round's problems from a seed. The same seed
- * always yields the same sequence, so a shared challenge is perfectly
- * reproducible on any device.
+ * Deterministically derive the round's problems from a seed and difficulty. The
+ * same seed and mode always yield the same sequence, so a shared challenge is
+ * perfectly reproducible on any device.
  */
-export function generateProblems(seed: number, count: number = PROBLEM_POOL): Problem[] {
+export function generateProblems(
+  seed: number,
+  count: number = PROBLEM_POOL,
+  difficulty: Difficulty = DEFAULT_DIFFICULTY,
+): Problem[] {
   const rng = mulberry32(seed);
-  return Array.from({ length: count }, () => makeProblem(rng));
+  return Array.from({ length: count }, () => makeProblem(rng, difficulty));
 }
 
 /** Human-readable form of a problem — the pre-rendered statement. */

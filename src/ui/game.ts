@@ -1,12 +1,13 @@
 import { el, clear } from './dom';
 import { Countdown } from '../game/timer';
 import { GameEngine } from '../game/engine';
-import { generateProblems, ROUND_SECONDS } from '../game/challenge';
+import { generateProblems, ROUND_SECONDS, type Difficulty } from '../game/challenge';
 import { isSoundEnabled, toggleSound, playCorrect, playWrong } from '../audio/sfx';
 
 export interface GameOptions {
   seed: number;
   scoreToBeat: number | null;
+  difficulty: Difficulty;
   onEnd: (engine: GameEngine) => void;
   onQuit: () => void;
 }
@@ -21,10 +22,10 @@ export interface GameOptions {
  * is identical on desktop and mobile.
  */
 export function renderGame(root: HTMLElement, opts: GameOptions): () => void {
-  const { seed, scoreToBeat, onEnd, onQuit } = opts;
+  const { seed, scoreToBeat, difficulty, onEnd, onQuit } = opts;
   clear(root);
 
-  const engine = new GameEngine(generateProblems(seed));
+  const engine = new GameEngine(generateProblems(seed, undefined, difficulty));
 
   // Header: (quit · sound) · timer · score.
   const timerEl = el('span', { className: 'timer', textContent: formatTime(ROUND_SECONDS) });

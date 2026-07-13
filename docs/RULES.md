@@ -5,11 +5,21 @@
 Score as many points as possible within the round's 3-minute timer by solving
 as many problems as you can.
 
+## Difficulty
+
+Before a new game you pick a mode on the home screen (the choice is remembered):
+
+- **Moyen** — the full game described below.
+- **Facile** — tuned for younger players: **no equations**, **no traps** (plain
+  multi-step stories and only the two most direct worded problems), and tighter
+  number ranges for ×, ÷ and the +/− story. Negative numbers still show up. A
+  challenge link or a history replay always replays in the mode it was created in.
+
 ## The problems
 
 Every round interleaves several exercise types, drawn at random:
 
-- **Multiplication** (e.g. `8 × 12`, operands in [−12, 12]) → **3 points**.
+- **Multiplication** (e.g. `8 × 12`, operands in [−12, 12]; easy: [−5, 5]) → **3 points**.
 - **Exact division** (e.g. `51 ÷ 3`) → **3 points**.
 - **Multi-step story** mixing additions and subtractions (e.g. "Jade a 11
   bonbons, en donne 5, en reçoit 2 et 3…") → **3 points**, or **5 points** when

@@ -149,13 +149,13 @@ describe('generateProblems (easy mode)', () => {
     expect(kinds).toEqual(new Set<ProblemKind>(['mul', 'div', 'chain', 'word']));
   });
 
-  it('multiplies operands in [-5, 5]', () => {
+  it('multiplies operands in [-12, 12] (full range, like medium)', () => {
     for (const p of generateProblems(4141, 400, 'easy')) {
       if (p.kind !== 'mul') continue;
       const [a, b] = operands(p.prompt, '×');
       for (const n of [a, b]) {
-        expect(n).toBeGreaterThanOrEqual(-5);
-        expect(n).toBeLessThanOrEqual(5);
+        expect(n).toBeGreaterThanOrEqual(-12);
+        expect(n).toBeLessThanOrEqual(12);
       }
     }
   });

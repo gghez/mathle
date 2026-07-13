@@ -20,8 +20,9 @@ import { mulberry32 } from '../core/rng';
 //   • 'medium' — the full mix above, the game as originally designed.
 //   • 'easy'   — tuned for younger players: no equations, no traps (plain
 //     chains and only the gentler worded problems), and tighter number ranges
-//     for ×, ÷ and the +/− story (negatives still appear). The difficulty is
-//     part of the challenge, so a shared link replays the same mode.
+//     for ÷ and the +/− story (negatives still appear; × keeps its full range).
+//     The difficulty is part of the challenge, so a shared link replays the
+//     same mode.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type ProblemKind = 'mul' | 'div' | 'chain' | 'equation' | 'word';
@@ -89,11 +90,10 @@ const NAMES = ['Léa', 'Tom', 'Zoé', 'Hugo', 'Emma', 'Lucas', 'Jade', 'Noah'] a
 
 // ── Multiplication & exact division (quick single-operation drills) ──────────
 
-function makeMul(rng: () => number, difficulty: Difficulty): Problem {
-  // Easy keeps a small times-table range; both signs stay in play.
-  const lim = difficulty === 'easy' ? 5 : 12;
-  const a = intBetween(rng, -lim, lim);
-  const b = intBetween(rng, -lim, lim);
+function makeMul(rng: () => number): Problem {
+  // Full times-table range in both modes; both signs stay in play.
+  const a = intBetween(rng, -12, 12);
+  const b = intBetween(rng, -12, 12);
   return { kind: 'mul', prompt: `${num(a)} × ${paren(b)}`, answer: a * b, points: 3 };
 }
 
@@ -370,12 +370,12 @@ function makeProblem(rng: () => number, difficulty: Difficulty): Problem {
   const r = rng();
   if (difficulty === 'easy') {
     if (r < 0.25) return chainProblem(rng, false, 'easy');
-    if (r < 0.55) return makeMul(rng, 'easy');
+    if (r < 0.55) return makeMul(rng);
     if (r < 0.85) return makeDiv(rng, 'easy');
     return makeWord(rng, 'easy');
   }
   if (r < 0.25) return chainProblem(rng, rng() < 0.4, 'medium');
-  if (r < 0.45) return makeMul(rng, 'medium');
+  if (r < 0.45) return makeMul(rng);
   if (r < 0.65) return makeDiv(rng, 'medium');
   if (r < 0.8) return makeEquation(rng);
   return makeWord(rng, 'medium');

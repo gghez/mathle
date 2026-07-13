@@ -47,6 +47,15 @@ screen (`src/ui/rules.ts`) reachable via the "?" help button.
 - `npm test` — run Vitest once.
 - `npm run build:icons` — rasterize `public/icon.svg` into the PNG icons.
 
+## Browser verification
+
+When verifying the app in the browser preview (not unit tests), it is fine to
+temporarily lower `ROUND_SECONDS` in `src/game/challenge.ts` to a small value so
+reaching the end-of-round screen doesn't cost the full 3 minutes each time.
+Always revert it to `180` before committing. Alternatively, the review screen can
+be exercised without playing a round by seeding a `GameRecord` into
+`localStorage` (`mathle:history`) and opening it from the in-app history.
+
 ## Deployment
 
 - Pushing to `main` triggers a Netlify deploy (continuous deployment).
